@@ -32,42 +32,48 @@
 	  (goto-char (point-max))
 	  (setq ptstk (cdr ptstk)))))))
 
+
+(defun pointstack-do-move (message marker)
+  (switch-to-buffer (marker-buffer marker))
+  (goto-char (marker-position marker))
+  (message (format "%s %s" message marker))
+  (pointstack-update))
+
+(defun pointstack-do-push (message marker)
+  (setq pointstack-stack (cons marker pointstack-stack))
+  (message (format "Push %s" marker))
+  (pointstack-update))
+
+
+(defun pointstack-current-marker ()
+  (set-marker (make-marker) (point) (current-buffer)))
+
 (defun pointstack-push ()
   (interactive "")
-  (let* ((marker (set-marker (make-marker) (point) (current-buffer))))
-    (setq pointstack-stack (cons marker pointstack-stack))
-    (message (format "Push %s" marker))
-    (pointstack-update)))
+  (pointstack-do-push "Push" (pointstack-current-marker)))
 
 (defun pointstack-swap-point-and-top ()
   (interactive "")
-  (if pointstack-stack
-      (let ((new-marker (set-marker (make-marker) (point) (current-buffer)))
-	    (old-marker (pop pointstack-stack)))
-	(switch-to-buffer (marker-buffer old-marker))
-	(goto-char (marker-position old-marker))
-	(message (format "Pointstack swap %s %s" old-marker new-marker))
-	(setq pointstack-stack (cons new-marker pointstack-stack))
-	(pointstack-update))
-    (message (format "Pointstack is empty" pointstack-stack))))
+  (let ((new-marker (pointstack-current-marker)))
+    (pointstack-pop)
+    (pointstack-do-push "Swap" new-marker)))
 
 (defun pointstack-pop ()
   (interactive "")
   (if pointstack-stack
-      (progn
-	(let ((marker (pop pointstack-stack)))
-	  (switch-to-buffer (marker-buffer marker))
-	  (goto-char (marker-position marker))
-	  (message (format "Pop %s" marker))
-	  (pointstack-update)))
+      (pointstack-do-move "Pop" (pop pointstack-stack))
+    (message (format "Pointstack is empty" pointstack-stack))))
+
+(defun pointstack-top ()
+  (interactive "")
+  (if pointstack-stack
+      (pointstack-do-move "Top" (car pointstack-stack))
     (message (format "Pointstack is empty" pointstack-stack))))
 
 (defun pointstack-discard-pop ()
   (interactive "")
   (if pointstack-stack
-      (progn
-	(message (format "Discard %s" (pop pointstack-stack)))
-	(pointstack-update))
+      (pop pointstack-stack)
     (message (format "Pointstack is empty" pointstack-stack))))
 
 (defun pointstack-clear ()
